@@ -42,6 +42,10 @@ class Database
             'readOnly' => true,
         ], $config);
 
+        if (isset($config['db_prefix']) && !isset($config['prefix'])) {
+            $this->config['prefix'] = $config['db_prefix'];
+        }
+
         $this->prefix = $this->config['prefix'];
         $this->readOnly = (bool)$this->config['readOnly'];
         $this->connect();

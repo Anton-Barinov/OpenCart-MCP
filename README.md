@@ -84,6 +84,13 @@ composer require anton-barinov/opencart-mcp
 
 *(Composer is completely optional; the codebase includes a built-in zero-dependency autoloader).*
 
+### Option C: Build Drop-in OCMOD Extension
+Build a ready-to-upload extension zip file for OpenCart Admin:
+```bash
+php bin/package-module
+```
+This generates `dist/opencart-mcp.ocmod.zip`. For full admin UI controls and 1-click token generation, see also [OpenCart-AI](https://github.com/Anton-Barinov/OpenCart-AI).
+
 ---
 
 ## 🚀 Quickstart in 30 Seconds

@@ -161,7 +161,9 @@ class OpenCartDetector
         $this->version = $version;
 
         if ($version !== 'unknown') {
-            if (strpos($version, '2.') === 0) {
+            if (strpos($version, '1.5') === 0) {
+                $this->majorVersion = '1.5.x';
+            } elseif (strpos($version, '2.') === 0) {
                 $this->majorVersion = '2.x';
             } elseif (strpos($version, '3.') === 0) {
                 $this->majorVersion = '3.x';
@@ -246,6 +248,26 @@ class OpenCartDetector
     public function getMajorVersion()
     {
         return $this->majorVersion;
+    }
+
+    /**
+     * Identify OpenCart distribution / edition (ocStore, OpenCart.pro, BazarCMS, Standard)
+     *
+     * @return string
+     */
+    public function getDistribution()
+    {
+        $v = strtolower($this->version);
+        if (strpos($v, 'ce') !== false || strpos($v, 'ocstore') !== false) {
+            return 'ocStore';
+        }
+        if (strpos($v, 'pro') !== false) {
+            return 'OpenCart.pro';
+        }
+        if (strpos(strtolower($this->getDbPrefix()), 'bazar') !== false) {
+            return 'BazarCMS';
+        }
+        return 'OpenCart Standard';
     }
 
     public function getDbDriver()

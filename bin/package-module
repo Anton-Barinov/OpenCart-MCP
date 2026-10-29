@@ -1,0 +1,60 @@
+#!/usr/bin/env php
+<?php
+/**
+ * OpenCart Universal MCP Module Packager
+ * Packages the standalone MCP server into a drop-in extension
+ *
+ * @author Anton Barinov <https://github.com/Anton-Barinov>
+ * @license MIT
+ */
+
+$root = dirname(__DIR__);
+$distDir = $root . '/dist';
+$zipFile = $distDir . '/opencart-mcp.ocmod.zip';
+
+if (!is_dir($distDir)) {
+    mkdir($distDir, 0755, true);
+}
+
+if (file_exists($zipFile)) {
+    unlink($zipFile);
+}
+
+echo "📦 Packaging OpenCart-MCP OCMOD extension...\n";
+
+$zip = new ZipArchive();
+if ($zip->open($zipFile, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+    fwrite(STDERR, "❌ Failed to create zip file at {$zipFile}\n");
+    exit(1);
+}
+
+// 1. Add standalone bridge
+$standaloneFile = $root . '/standalone/opencart-mcp.php';
+if (file_exists($standaloneFile)) {
+    $zip->addFile($standaloneFile, 'upload/opencart-mcp.php');
+}
+
+// 2. Add src/ files into system/library/opencart_mcp/
+$srcDir = $root . '/src';
+$iterator = new RecursiveIteratorIterator(
+    new RecursiveDirectoryIterator($srcDir, RecursiveDirectoryIterator::SKIP_DOTS),
+    RecursiveIteratorIterator::SELF_FIRST
+);
+
+$count = 0;
+foreach ($iterator as $file) {
+    $filePath = $file->getRealPath();
+    $relativePath = 'upload/system/library/opencart_mcp/' . substr($filePath, strlen($srcDir) + 1);
+
+    if ($file->isDir()) {
+        $zip->addEmptyDir($relativePath);
+    } elseif ($file->isFile()) {
+        if (basename($filePath)[0] === '.') continue;
+        $zip->addFile($filePath, $relativePath);
+        $count++;
+    }
+}
+
+$zip->close();
+$sizeKb = round(filesize($zipFile) / 1024, 2);
+echo "✅ Successfully built: dist/opencart-mcp.ocmod.zip ({$sizeKb} KB, {$count} files included)\n";

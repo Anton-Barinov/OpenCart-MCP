@@ -50,8 +50,10 @@ class SystemTools
 
         return [
             'store_name'       => $storeName,
+            'store_url'        => $this->schema->getStoreUrl(),
             'opencart_version' => $this->detector->getVersion(),
             'opencart_major'   => $this->detector->getMajorVersion(),
+            'distribution'     => $this->detector->getDistribution(),
             'php_version'      => PHP_VERSION,
             'os'               => PHP_OS,
             'database'         => [

@@ -82,6 +82,8 @@ class ProductTools
             $row['product_id'] = (int)$row['product_id'];
             $row['quantity'] = (int)$row['quantity'];
             $row['price'] = (float)$row['price'];
+            $row['formatted_price'] = $this->schema->formatCurrency($row['price']);
+            $row['main_category_id'] = $this->schema->getMainCategoryId($row['product_id']);
             $row['status'] = (int)$row['status'] === 1 ? 'Enabled' : 'Disabled';
             $row['seo_url'] = $this->schema->getSeoKeyword('product_id=' . $row['product_id']);
         }
@@ -189,24 +191,27 @@ class ProductTools
         }
 
         return [
-            'product_id'     => (int)$product['product_id'],
-            'name'           => $product['name'],
-            'model'          => $product['model'],
-            'sku'            => $product['sku'],
-            'price'          => (float)$product['price'],
-            'special_price'  => !empty($specials) ? (float)$specials[0]['price'] : null,
-            'quantity'       => (int)$product['quantity'],
-            'stock_status'   => (int)$product['quantity'] > 0 ? 'In Stock' : 'Out of Stock',
-            'status'         => (int)$product['status'] === 1 ? 'Enabled' : 'Disabled',
-            'manufacturer'   => $product['manufacturer'],
-            'seo_url'        => $this->schema->getSeoKeyword('product_id=' . $productId),
-            'categories'     => $cats,
-            'attributes'     => $attributes,
-            'images'         => array_unique($imageList),
-            'meta_title'     => $product['meta_title'],
-            'meta_description' => $product['meta_description'],
-            'date_added'     => $product['date_added'],
-            'date_modified'  => $product['date_modified'],
+            'product_id'              => (int)$product['product_id'],
+            'name'                    => $product['name'],
+            'model'                   => $product['model'],
+            'sku'                     => $product['sku'],
+            'price'                   => (float)$product['price'],
+            'formatted_price'         => $this->schema->formatCurrency($product['price']),
+            'special_price'           => !empty($specials) ? (float)$specials[0]['price'] : null,
+            'formatted_special_price' => !empty($specials) ? $this->schema->formatCurrency($specials[0]['price']) : null,
+            'quantity'                => (int)$product['quantity'],
+            'stock_status'            => (int)$product['quantity'] > 0 ? 'In Stock' : 'Out of Stock',
+            'status'                  => (int)$product['status'] === 1 ? 'Enabled' : 'Disabled',
+            'manufacturer'            => $product['manufacturer'],
+            'seo_url'                 => $this->schema->getSeoKeyword('product_id=' . $productId),
+            'main_category_id'        => $this->schema->getMainCategoryId($productId),
+            'categories'              => $cats,
+            'attributes'              => $attributes,
+            'images'                  => array_unique($imageList),
+            'meta_title'              => $product['meta_title'],
+            'meta_description'        => $product['meta_description'],
+            'date_added'              => $product['date_added'],
+            'date_modified'           => $product['date_modified'],
         ];
     }
 

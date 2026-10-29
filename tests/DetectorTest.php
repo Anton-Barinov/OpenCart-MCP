@@ -59,6 +59,18 @@ assert($detector4->getVersion() === '4.0.2.3', 'Version should be 4.0.2.3');
 assert($detector4->getMajorVersion() === '4.x', 'Major version should be 4.x');
 echo "  ✓ OpenCart 4.x version detection passed\n";
 
+// 4. Test ocStore distribution detection
+file_put_contents($tmpDir . '/index.php', "<?php define('VERSION', '3.0.3.8-ce.1.1');");
+$detectorOcStore = new OpenCartDetector($tmpDir);
+assert($detectorOcStore->getDistribution() === 'ocStore', 'Distribution should be ocStore');
+echo "  ✓ ocStore distribution detection passed (3.0.3.8-ce.1.1)\n";
+
+// 5. Test OpenCart 1.5.x legacy detection
+file_put_contents($tmpDir . '/index.php', "<?php define('VERSION', '1.5.6.4');");
+$detector15 = new OpenCartDetector($tmpDir);
+assert($detector15->getMajorVersion() === '1.5.x', 'Major version should be 1.5.x');
+echo "  ✓ OpenCart 1.5 legacy version detection passed (1.5.6.4)\n";
+
 // Cleanup
 @unlink($tmpDir . '/config.php');
 @unlink($tmpDir . '/index.php');
