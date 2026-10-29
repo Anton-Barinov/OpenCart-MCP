@@ -260,6 +260,7 @@ php tests/run_tests.php
 
 ## 🔗 Related Projects in the Ecosystem
 
+- 🤖 **[OpenCart-AI](https://github.com/Anton-Barinov/OpenCart-AI)**: Turn-key OCMOD/vQmod extension with admin UI, 1-click token generator, and built-in e-commerce agent prompts for Claude Desktop and Cursor.
 - ⚡ **[PHP-MCP](https://github.com/Anton-Barinov/PHP-MCP)**: Zero-dependency Model Context Protocol framework for PHP 8.1+.
 - 🛡️ **[PHP-Hardening-Kit](https://github.com/Anton-Barinov/PHP-Hardening-Kit)**: Universal runtime security shield protecting PHP against zero-days and legacy exploits.
 - 📦 **[Single-PHP](https://github.com/Anton-Barinov/Single-PHP)**: Compile PHP code and dependencies into a single standalone executable binary.
