@@ -1,0 +1,169 @@
+#!/usr/bin/env php
+<?php
+/**
+ * OpenCart Universal MCP Server CLI
+ * Compatible with PHP 5.4 - 8.4+
+ *
+ * @author    Anton Barinov <https://github.com/Anton-Barinov>
+ * @license   MIT
+ */
+
+error_reporting(E_ALL & ~E_NOTICE & ~E_DEPRECATED);
+ini_set('display_errors', '0');
+
+require_once __DIR__ . '/../src/autoload.php';
+
+use OpenCartMcp\Factory;
+use OpenCartMcp\Transport\StdioTransport;
+use OpenCartMcp\Transport\HttpTransport;
+use OpenCartMcp\Core\OpenCartDetector;
+use OpenCartMcp\Core\Database;
+
+$argv = $_SERVER['argv'];
+$script = array_shift($argv);
+$command = !empty($argv) && $argv[0][0] !== '-' ? array_shift($argv) : 'serve';
+
+// Parse options: --key=val or --flag
+$options = [];
+foreach ($argv as $arg) {
+    if (strpos($arg, '--') === 0) {
+        $part = substr($arg, 2);
+        if (strpos($part, '=') !== false) {
+            list($k, $v) = explode('=', $part, 2);
+            $options[$k] = $v;
+        } else {
+            $options[$part] = true;
+        }
+    }
+}
+
+// Map CLI flags to Factory options
+$factoryOptions = [
+    'root'            => isset($options['root']) ? $options['root'] : '',
+    'db_host'         => isset($options['db-host']) ? $options['db-host'] : null,
+    'db_user'         => isset($options['db-user']) ? $options['db-user'] : null,
+    'db_password'     => isset($options['db-password']) ? $options['db-password'] : null,
+    'db_name'         => isset($options['db-name']) ? $options['db-name'] : null,
+    'db_port'         => isset($options['db-port']) ? $options['db-port'] : null,
+    'db_prefix'       => isset($options['db-prefix']) ? $options['db-prefix'] : null,
+    'allow_mutations' => isset($options['allow-mutations']),
+    'mask_pii'        => !isset($options['no-mask-pii']),
+    'token'           => isset($options['token']) ? $options['token'] : null,
+];
+
+switch ($command) {
+    case 'serve':
+        try {
+            $server = Factory::create($factoryOptions);
+        } catch (\Exception $e) {
+            fwrite(STDERR, "[OpenCart-MCP Startup Error]: " . $e->getMessage() . "\n");
+            exit(1);
+        }
+
+        if (isset($options['http'])) {
+            $port = isset($options['port']) ? (int)$options['port'] : 8080;
+            fwrite(STDERR, "OpenCart-MCP HTTP Transport starting on port {$port}...\n");
+            // Handle built-in PHP web server invocation if running directly via php -S
+            $http = new HttpTransport($server);
+            $http->handleWebRequest();
+        } else {
+            // Default: stdio transport for Claude Desktop / Cursor
+            $transport = new StdioTransport($server);
+            $transport->listen();
+        }
+        break;
+
+    case 'inspect':
+        $root = $factoryOptions['root'] ? $factoryOptions['root'] : OpenCartDetector::findRoot();
+        echo "=========================================================\n";
+        echo "  OpenCart Universal MCP Server — Inspection\n";
+        echo "=========================================================\n";
+        echo "PHP Version:        " . PHP_VERSION . "\n";
+        echo "Target Root:        " . ($root ? $root : "(Current Directory)") . "\n";
+
+        $detector = new OpenCartDetector($root ? $root : getcwd());
+        echo "OpenCart Version:   " . $detector->getVersion() . " [" . $detector->getMajorVersion() . "]\n";
+        echo "Database Driver:    " . $detector->getDbDriver() . "\n";
+        echo "Database Host:      " . $detector->getDbHostname() . ":" . $detector->getDbPort() . "\n";
+        echo "Database Name:      " . $detector->getDbDatabase() . "\n";
+        echo "Table Prefix:       " . $detector->getDbPrefix() . "\n";
+
+        try {
+            $server = Factory::create($factoryOptions);
+            echo "Database Status:    CONNECTED (OK) ✅\n";
+            echo "Registered Tools:   " . count($server->getTools()) . " tools active\n";
+            echo "Registered Res:     " . count($server->getResources()) . " resources active\n";
+            echo "Registered Prompts: " . count($server->getPrompts()) . " prompt templates active\n";
+            echo "Read-Only Mode:     " . ($factoryOptions['allow_mutations'] ? "MUTATIONS PERMITTED ⚠️" : "STRICT READ-ONLY (SAFE) 🛡️") . "\n";
+            echo "PII Masking:        " . ($factoryOptions['mask_pii'] ? "ENABLED (GDPR/152-FZ) 🔒" : "DISABLED") . "\n";
+            echo "=========================================================\n";
+        } catch (\Exception $e) {
+            echo "Database Status:    FAILED ❌ (" . $e->getMessage() . ")\n";
+            echo "=========================================================\n";
+            exit(1);
+        }
+        break;
+
+    case 'doctor':
+        echo "=== OpenCart-MCP System Diagnostic (Doctor) ===\n";
+        echo "1. PHP >= 5.4: " . (version_compare(PHP_VERSION, '5.4.0', '>=') ? "PASS (" . PHP_VERSION . ") ✅" : "FAIL ❌") . "\n";
+        echo "2. JSON Extension: " . (extension_loaded('json') ? "PASS ✅" : "FAIL ❌") . "\n";
+        echo "3. PDO MySQL: " . (extension_loaded('pdo_mysql') ? "PASS ✅" : "NOT LOADED (Will use mysqli fallback) ⚠️") . "\n";
+        echo "4. MySQLi: " . (extension_loaded('mysqli') ? "PASS ✅" : "NOT LOADED ⚠️") . "\n";
+        echo "5. MBString Extension: " . (extension_loaded('mbstring') ? "PASS ✅" : "NOT LOADED (Fallback active) ⚠️") . "\n";
+        echo "Diagnostic Complete.\n";
+        break;
+
+    case 'call':
+        $toolName = !empty($argv) ? array_shift($argv) : '';
+        $rawArgs = !empty($argv) ? array_shift($argv) : '{}';
+
+        if (!$toolName) {
+            echo "Usage: opencart-mcp call <tool_name> ['{\"arg\":\"val\"}']\n";
+            exit(1);
+        }
+
+        try {
+            $server = Factory::create($factoryOptions);
+            $args = @json_decode($rawArgs, true);
+            if (!is_array($args)) {
+                $args = [];
+            }
+
+            $request = new \OpenCartMcp\Protocol\JsonRpcRequest(1, 'tools/call', [
+                'name'      => $toolName,
+                'arguments' => $args,
+            ]);
+
+            $res = $server->handleRequest($request);
+            if ($res) {
+                echo $res->toJson() . "\n";
+            }
+        } catch (\Exception $e) {
+            echo json_encode(['error' => $e->getMessage()]) . "\n";
+            exit(1);
+        }
+        break;
+
+    case 'help':
+    default:
+        echo "OpenCart Universal MCP Server (CLI)\n";
+        echo "Author: Anton Barinov (https://github.com/Anton-Barinov)\n\n";
+        echo "Usage:\n";
+        echo "  opencart-mcp serve [options]      Start MCP Server on stdio for Claude Desktop / Cursor\n";
+        echo "  opencart-mcp inspect [options]    Verify OpenCart store connection & database\n";
+        echo "  opencart-mcp doctor               System health check\n";
+        echo "  opencart-mcp call <tool> [json]   Execute tool from command line\n\n";
+        echo "Options:\n";
+        echo "  --root=<path>                     Path to OpenCart root (reads config.php automatically)\n";
+        echo "  --db-host=<host>                  Database host (default from config.php)\n";
+        echo "  --db-name=<dbname>                Database name\n";
+        echo "  --db-user=<user>                  Database user\n";
+        echo "  --db-password=<pass>              Database password\n";
+        echo "  --db-prefix=<prefix>              Table prefix (e.g. oc_)\n";
+        echo "  --allow-mutations                 Permit write operations (prices, stock, orders)\n";
+        echo "  --no-mask-pii                     Disable PII masking in customer records\n";
+        echo "  --token=<secret>                  Require Bearer token authentication\n";
+        echo "  --http [--port=8080]              Run in HTTP mode instead of stdio\n";
+        break;
+}

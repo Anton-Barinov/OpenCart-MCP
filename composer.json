@@ -1,0 +1,35 @@
+{
+  "name": "anton-barinov/opencart-mcp",
+  "description": "Universal, Zero-Dependency Model Context Protocol (MCP) Server for OpenCart 2.0 - 4.0+ (PHP 5.4 - 8.4+)",
+  "type": "library",
+  "keywords": [
+    "opencart",
+    "mcp",
+    "model-context-protocol",
+    "claude-desktop",
+    "cursor",
+    "ai-agent",
+    "llm",
+    "ecommerce"
+  ],
+  "homepage": "https://github.com/Anton-Barinov/OpenCart-MCP",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Anton Barinov",
+      "email": "55404783+Anton-Barinov@users.noreply.github.com",
+      "homepage": "https://github.com/Anton-Barinov"
+    }
+  ],
+  "require": {
+    "php": ">=5.4.0"
+  },
+  "bin": [
+    "bin/opencart-mcp"
+  ],
+  "autoload": {
+    "psr-4": {
+      "OpenCartMcp\\": "src/"
+    }
+  }
+}
