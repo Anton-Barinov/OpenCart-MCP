@@ -115,6 +115,36 @@ assertCheck(
     "Limit: " . $negativeResult['limit'] . ", Offset: " . $negativeResult['offset']
 );
 
+// ---------------------------------------------------------
+// 3. Garbage Data Fuzzing & Malformed JSON-RPC Requests
+// ---------------------------------------------------------
+echo "3. Testing Garbage Data Fuzzing & JSON-RPC Protocol Robustness...\n";
+$server = new \OpenCartMcp\Protocol\McpServer(new SecurityPolicy());
+
+// Empty input
+$r1 = json_decode($server->handleRaw(''), true);
+assertCheck("Empty input returns -32700", $r1['error']['code'] === -32700);
+
+// Corrupted JSON
+$r2 = json_decode($server->handleRaw('{"jsonrpc": "2.0", broken'), true);
+assertCheck("Corrupted JSON returns -32700", $r2['error']['code'] === -32700);
+
+// Non-string method
+$r3 = json_decode($server->handleRaw('{"jsonrpc": "2.0", "id": 1, "method": 999}'), true);
+assertCheck("Non-string method returns -32600", $r3['error']['code'] === -32600);
+
+// Unknown method
+$r4 = json_decode($server->handleRaw('{"jsonrpc": "2.0", "id": 42, "method": "ghost_unknown_tool"}'), true);
+assertCheck("Unknown method returns -32601", $r4['error']['code'] === -32601);
+
+// Empty batch array
+$r5 = json_decode($server->handleRaw('[]'), true);
+assertCheck("Empty batch returns -32600", $r5['error']['code'] === -32600);
+
+// Extreme negative ID & type confusion in params
+$r6 = json_decode($server->handleRaw('{"jsonrpc": "2.0", "id": -999999999, "method": "ping", "params": "string_instead_of_object"}'), true);
+assertCheck("Extreme negative ID preserved in response", $r6['id'] === -999999999);
+
 echo "\n---------------------------------------------------------\n";
 echo "Results: {$pass} Passed, {$fail} Failed\n";
 echo "---------------------------------------------------------\n";
