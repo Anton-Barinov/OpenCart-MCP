@@ -11,6 +11,7 @@ $testFiles = [
     __DIR__ . '/ProtocolTest.php',
     __DIR__ . '/EndToEndToolsTest.php',
     __DIR__ . '/RealSitesAuditTest.php',
+    __DIR__ . '/ComplianceAndStressTest.php',
 ];
 
 $failed = 0;

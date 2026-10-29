@@ -54,6 +54,12 @@ class Database
      */
     public function connect()
     {
+        if (isset($this->config['pdo']) && $this->config['pdo'] instanceof \PDO) {
+            $this->connection = $this->config['pdo'];
+            $this->driverType = 'pdo';
+            return;
+        }
+
         $host = $this->config['host'];
         $port = (int)$this->config['port'];
         $user = $this->config['user'];
